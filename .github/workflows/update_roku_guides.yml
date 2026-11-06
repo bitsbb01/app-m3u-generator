@@ -1,0 +1,44 @@
+name: Update Roku Guide Data
+
+on:
+  schedule:
+    - cron: "15 4 * * *"
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "generate_roku_guides.py"
+      - ".github/workflows/update_roku_guides.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  update-guides:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Generate current guide data
+        run: python generate_roku_guides.py
+
+      - name: Commit updated guide JSON
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add epg/
+          if [ -n "$(git status --porcelain epg/)" ]; then
+            git commit -m "Refresh Roku guide data"
+            git push
+          else
+            echo "Guide data has not changed."
+          fi
