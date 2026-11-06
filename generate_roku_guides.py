@@ -122,19 +122,21 @@ def main():
     feeds = available_feeds()
     for country, channels in sorted(parse_playlist(playlist).items()):
         feed_name = choose_feed(country, feeds)
+        path = os.path.join(OUTPUT_DIR, country.lower() + ".json")
         if not feed_name:
-            print("No current guide feed for " + country)
-            continue
-        url = EPG_INDEX_URL + "epg_ripper_" + feed_name + ".xml.gz"
-        try:
-            result = build_country(country, channels, url)
-            path = os.path.join(OUTPUT_DIR, country.lower() + ".json")
-            with open(path, "w", encoding="utf-8") as output:
-                json.dump(result, output, ensure_ascii=False, separators=(",", ":"))
-            count = sum(len(entries) for entries in result["programmes"].values())
-            print(path + ": " + str(count) + " programmes")
-        except Exception as error:
-            print("Guide update failed for " + country + ": " + str(error))
+            result = {"country": country, "updated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), "programmes": {}}
+            print("No current guide feed for " + country + "; writing an empty guide")
+        else:
+            url = EPG_INDEX_URL + "epg_ripper_" + feed_name + ".xml.gz"
+            try:
+                result = build_country(country, channels, url)
+            except Exception as error:
+                result = {"country": country, "updated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), "programmes": {}}
+                print("Guide update failed for " + country + ": " + str(error) + "; writing an empty guide")
+        with open(path, "w", encoding="utf-8") as output:
+            json.dump(result, output, ensure_ascii=False, separators=(",", ":"))
+        count = sum(len(entries) for entries in result["programmes"].values())
+        print(path + ": " + str(count) + " programmes")
 
 if __name__ == "__main__":
     main()
